@@ -18,7 +18,7 @@ type UserWithNetworks struct {
 type Firewall interface {
 	// GenerateRules generates firewall rules for the given users
 	GenerateRules(users []UserWithNetworks) string
-	// GetRulesFile returns the path to the rules file
+	// GetRulesFile returns the path to the rule file
 	GetRulesFile() string
 	// GetReloadCommand returns the command to reload firewall rules
 	GetReloadCommand() string
@@ -45,7 +45,7 @@ func CollectUserNetworks(ctx context.Context, client *api.Client, users []api.Us
 
 		routes, err := client.GetUserRoutes(ctx, user.ID)
 		if err != nil {
-			// Skip user on error, don't fail entire operation
+			// Skip user on error, don't fail the entire operation
 			continue
 		}
 

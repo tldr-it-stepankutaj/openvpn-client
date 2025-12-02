@@ -26,16 +26,6 @@ type Options struct {
 	Program string
 }
 
-// DefaultOptions returns default logger options
-func DefaultOptions(program string) Options {
-	return Options{
-		Level:   slog.LevelInfo,
-		JSON:    false,
-		Output:  os.Stderr,
-		Program: program,
-	}
-}
-
 // New creates a new logger with the given options
 func New(opts Options) *Logger {
 	var handler slog.Handler
@@ -71,14 +61,6 @@ func (l *Logger) WithContext(ctx context.Context) context.Context {
 	return context.WithValue(ctx, loggerKey, l)
 }
 
-// FromContext retrieves the logger from context, or returns a default logger
-func FromContext(ctx context.Context) *Logger {
-	if l, ok := ctx.Value(loggerKey).(*Logger); ok {
-		return l
-	}
-	return New(DefaultOptions(""))
-}
-
 // With returns a logger with additional attributes
 func (l *Logger) With(args ...any) *Logger {
 	return &Logger{
@@ -101,13 +83,13 @@ func (l *Logger) WithError(err error) *Logger {
 	return l.With("error", err.Error())
 }
 
-// Fatal logs at error level and exits with code 1
+// Fatal logs at the error level and exits with code 1
 func (l *Logger) Fatal(msg string, args ...any) {
 	l.Error(msg, args...)
 	os.Exit(1)
 }
 
-// FatalContext logs at error level with context and exits with code 1
+// FatalContext logs at the error level with context and exits with code 1
 func (l *Logger) FatalContext(ctx context.Context, msg string, args ...any) {
 	l.ErrorContext(ctx, msg, args...)
 	os.Exit(1)

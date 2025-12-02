@@ -45,7 +45,7 @@ func main() {
 
 	ctx := context.Background()
 
-	// Authenticate if using legacy service account
+	// Authenticate if using a legacy service account
 	if !cfg.API.UseToken() {
 		if err := client.Authenticate(ctx, cfg.API.Username, cfg.API.Password); err != nil {
 			log.Error("API authentication failed", "error", err)
@@ -71,7 +71,7 @@ func main() {
 
 	log.Info("collected user networks", "users_with_rules", len(usersWithNetworks))
 
-	// Create firewall generator
+	// Create a firewall generator
 	fw := firewall.New(&cfg.Firewall)
 
 	// Generate rules
@@ -80,7 +80,10 @@ func main() {
 	// Dry run - just print rules
 	if dryRun {
 		log.Info("dry run mode - printing rules")
-		os.Stdout.WriteString(newRules)
+		_, err := os.Stdout.WriteString(newRules)
+		if err != nil {
+			return
+		}
 		os.Exit(0)
 	}
 

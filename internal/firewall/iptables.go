@@ -42,7 +42,7 @@ func (i *IPTables) GenerateRules(users []UserWithNetworks) string {
 	rules.WriteString(fmt.Sprintf("-F %s\n", i.chainName))
 
 	for _, user := range users {
-		// Sort networks for consistent output
+		// Sort networks for a consistent output
 		sort.Strings(user.Networks)
 
 		rules.WriteString(fmt.Sprintf("# %s\n", user.Username))
@@ -56,7 +56,7 @@ func (i *IPTables) GenerateRules(users []UserWithNetworks) string {
 	return rules.String()
 }
 
-// GetRulesFile returns the path to the rules file
+// GetRulesFile returns the path to the rule file
 func (i *IPTables) GetRulesFile() string {
 	return i.rulesFile
 }

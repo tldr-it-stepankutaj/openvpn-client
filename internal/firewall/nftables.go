@@ -29,7 +29,7 @@ func (n *NFTables) GenerateRules(users []UserWithNetworks) string {
 	rules.WriteString("# Do not edit manually - changes will be overwritten\n\n")
 
 	for _, user := range users {
-		// Sort networks for consistent output
+		// Sort networks for a consistent output
 		sort.Strings(user.Networks)
 
 		rules.WriteString(fmt.Sprintf("# %s\n", user.Username))
@@ -41,7 +41,7 @@ func (n *NFTables) GenerateRules(users []UserWithNetworks) string {
 	return rules.String()
 }
 
-// GetRulesFile returns the path to the rules file
+// GetRulesFile returns the path to the rule file
 func (n *NFTables) GetRulesFile() string {
 	return n.rulesFile
 }

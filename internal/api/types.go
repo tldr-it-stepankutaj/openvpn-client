@@ -23,7 +23,7 @@ type UserResponse struct {
 	VpnIP     string     `json:"vpn_ip"`
 }
 
-// UserListResponse represents paginated list of users
+// UserListResponse represents a paginated list of users
 type UserListResponse struct {
 	Users      []UserResponse `json:"users"`
 	Total      int64          `json:"total"`

@@ -36,7 +36,7 @@ func main() {
 
 	authFile := args[0]
 
-	// Read credentials file
+	// Read the credential file
 	data, err := os.ReadFile(authFile)
 	if err != nil {
 		log.Error("failed to read auth file", "path", authFile, "error", err)

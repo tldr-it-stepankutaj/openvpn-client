@@ -67,7 +67,7 @@ func (c *APIConfig) UseToken() bool {
 // Load loads configuration from file with environment variable overrides.
 // Priority: CLI argument > environment variable > config file > defaults
 func Load(configPath string) (*Config, error) {
-	// Determine config path
+	// Determine a config path
 	path := resolveConfigPath(configPath)
 
 	// Read and parse config file

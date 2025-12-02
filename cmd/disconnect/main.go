@@ -49,7 +49,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Read session file
+	// Read the session file
 	sessionFile := filepath.Join(cfg.OpenVPN.SessionDir, fmt.Sprintf("session-%s", commonName))
 	data, err := os.ReadFile(sessionFile)
 	if err != nil {
@@ -71,7 +71,7 @@ func main() {
 
 	ctx := context.Background()
 
-	// Authenticate if using legacy service account
+	// Authenticate if using a legacy service account
 	if !cfg.API.UseToken() {
 		if err := client.Authenticate(ctx, cfg.API.Username, cfg.API.Password); err != nil {
 			userLog.Error("API authentication failed", "error", err)

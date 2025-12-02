@@ -9,7 +9,7 @@ import (
 // CIDRToNetmask converts CIDR notation to IP and netmask
 // Example: "192.168.1.0/24" -> "192.168.1.0 255.255.255.0"
 func CIDRToNetmask(cidr string) (string, error) {
-	// If no slash, treat as single IP
+	// If no slash, treat as a single IP
 	if !strings.Contains(cidr, "/") {
 		ip := net.ParseIP(cidr)
 		if ip == nil {

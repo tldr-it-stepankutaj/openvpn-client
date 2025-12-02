@@ -30,7 +30,7 @@ func main() {
 		Program: programName,
 	})
 
-	// Get OpenVPN config file path from positional argument
+	// Get OpenVPN config a file path from a positional argument
 	args := flag.Args()
 	if len(args) < 1 {
 		log.Error("OpenVPN config file path not provided")
@@ -64,7 +64,7 @@ func main() {
 
 	ctx := context.Background()
 
-	// Authenticate if using legacy service account
+	// Authenticate if using a legacy service account
 	if !cfg.API.UseToken() {
 		if err := client.Authenticate(ctx, cfg.API.Username, cfg.API.Password); err != nil {
 			userLog.Error("API authentication failed", "error", err)
@@ -124,7 +124,7 @@ func main() {
 		}
 	}
 
-	// Write config file
+	// Write a config file
 	if err := os.WriteFile(openvpnConfigFile, []byte(configContent.String()), 0644); err != nil {
 		userLog.Error("failed to write config file", "path", openvpnConfigFile, "error", err)
 		os.Exit(1)

@@ -55,7 +55,12 @@ func (c *Client) Authenticate(ctx context.Context, username, password string) er
 	if err != nil {
 		return fmt.Errorf("login request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			return
+		}
+	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return c.parseError(resp)
@@ -77,10 +82,10 @@ func (c *Client) ValidateVpnUser(ctx context.Context, username, password string)
 		Password: password,
 	}
 
-	// Use VPN-specific endpoint if using API token
+	// Use VPN-specific endpoint if using an API token
 	endpoint := "/api/v1/vpn-auth/authenticate"
 	if c.apiToken == "" {
-		// Fallback to regular login for legacy service account
+		// Fallback to regular login for a legacy service account
 		endpoint = "/api/v1/auth/login"
 	}
 
@@ -88,7 +93,12 @@ func (c *Client) ValidateVpnUser(ctx context.Context, username, password string)
 	if err != nil {
 		return nil, fmt.Errorf("validate user request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			return
+		}
+	}(resp.Body)
 
 	if c.apiToken != "" {
 		// VPN auth endpoint returns VpnAuthResponse
@@ -117,13 +127,18 @@ func (c *Client) ValidateVpnUser(ctx context.Context, username, password string)
 
 // GetUserByUsername finds a user by username
 func (c *Client) GetUserByUsername(ctx context.Context, username string) (*UserResponse, error) {
-	// Use VPN-specific endpoint if using API token
+	// Use VPN-specific endpoint if using an API token
 	if c.apiToken != "" {
 		resp, err := c.doRequest(ctx, http.MethodGet, "/api/v1/vpn-auth/users/by-username/"+url.PathEscape(username), nil, true)
 		if err != nil {
 			return nil, fmt.Errorf("get user request failed: %w", err)
 		}
-		defer resp.Body.Close()
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				return
+			}
+		}(resp.Body)
 
 		if resp.StatusCode != http.StatusOK {
 			return nil, c.parseError(resp)
@@ -145,7 +160,12 @@ func (c *Client) GetUserByUsername(ctx context.Context, username string) (*UserR
 	if err != nil {
 		return nil, fmt.Errorf("search users request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			return
+		}
+	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, c.parseError(resp)
@@ -167,7 +187,7 @@ func (c *Client) GetUserByUsername(ctx context.Context, username string) (*UserR
 
 // GetUserRoutes gets user's allowed networks (routes)
 func (c *Client) GetUserRoutes(ctx context.Context, userID string) ([]Network, error) {
-	// Use VPN-specific endpoint if using API token
+	// Use VPN-specific endpoint if using an API token
 	endpoint := "/api/v1/vpn-auth/users/" + userID + "/routes"
 	if c.apiToken == "" {
 		endpoint = "/api/v1/users/" + userID + "/groups"
@@ -177,14 +197,19 @@ func (c *Client) GetUserRoutes(ctx context.Context, userID string) ([]Network, e
 	if err != nil {
 		return nil, fmt.Errorf("get routes request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			return
+		}
+	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, c.parseError(resp)
 	}
 
 	if c.apiToken != "" {
-		// VPN endpoint returns routes wrapped in object
+		// VPN endpoint returns routes wrapped in an object
 		var routesResp RoutesResponse
 		if err := json.NewDecoder(resp.Body).Decode(&routesResp); err != nil {
 			return nil, fmt.Errorf("failed to decode routes: %w", err)
@@ -215,13 +240,18 @@ func (c *Client) GetUserRoutes(ctx context.Context, userID string) ([]Network, e
 
 // GetAllActiveUsers gets all active users for firewall rules
 func (c *Client) GetAllActiveUsers(ctx context.Context) ([]UserResponse, error) {
-	// Use VPN-specific endpoint if using API token
+	// Use VPN-specific endpoint if using an API token
 	if c.apiToken != "" {
 		resp, err := c.doRequest(ctx, http.MethodGet, "/api/v1/vpn-auth/users", nil, true)
 		if err != nil {
 			return nil, fmt.Errorf("get users request failed: %w", err)
 		}
-		defer resp.Body.Close()
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				return
+			}
+		}(resp.Body)
 
 		if resp.StatusCode != http.StatusOK {
 			return nil, c.parseError(resp)
@@ -252,10 +282,16 @@ func (c *Client) GetAllActiveUsers(ctx context.Context) ([]UserResponse, error) 
 
 		var listResp UserListResponse
 		if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
-			resp.Body.Close()
+			err := resp.Body.Close()
+			if err != nil {
+				return nil, err
+			}
 			return nil, fmt.Errorf("failed to decode users page %d: %w", page, err)
 		}
-		resp.Body.Close()
+		err = resp.Body.Close()
+		if err != nil {
+			return nil, err
+		}
 
 		allUsers = append(allUsers, listResp.Users...)
 
@@ -281,7 +317,12 @@ func (c *Client) CreateSession(ctx context.Context, userID, vpnIP, clientIP stri
 	if err != nil {
 		return nil, fmt.Errorf("create session request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			return
+		}
+	}(resp.Body)
 
 	if resp.StatusCode != http.StatusCreated {
 		return nil, c.parseError(resp)
@@ -308,7 +349,12 @@ func (c *Client) DisconnectSession(ctx context.Context, sessionID string, bytesR
 	if err != nil {
 		return fmt.Errorf("disconnect session request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			return
+		}
+	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return c.parseError(resp)
