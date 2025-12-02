@@ -211,9 +211,12 @@ The generated rules create/flush a custom chain (default: `VPN_USERS`).
 
 ## Documentation
 
-- [Installation Guide](help/installation.md)
-- [Client Integration Guide](help/client.md)
-- [Sample Configurations](samples/)
+| Document | Description |
+|----------|-------------|
+| [OpenVPN Integration Guide](help/openvpn_integration.md) | **Complete setup guide** - OpenVPN server, PKI, firewall, and integration |
+| [Installation Guide](help/installation.md) | Quick installation of this client |
+| [Client Integration Guide](help/client.md) | API reference and client details |
+| [Sample Configurations](samples/) | OpenVPN server/client configs, firewall examples |
 
 ## Related Projects
 
