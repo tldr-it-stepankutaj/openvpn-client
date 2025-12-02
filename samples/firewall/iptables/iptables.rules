@@ -1,0 +1,53 @@
+# Main iptables configuration with VPN user rules
+# Location: /etc/sysconfig/iptables
+# Reload: iptables-restore < /etc/sysconfig/iptables
+
+*filter
+:INPUT DROP [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT ACCEPT [0:0]
+:VPN_USERS - [0:0]
+
+# INPUT chain
+# Allow established connections
+-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+# Allow loopback
+-A INPUT -i lo -j ACCEPT
+
+# Allow SSH
+-A INPUT -p tcp --dport 22 -j ACCEPT
+
+# Allow OpenVPN (UDP)
+-A INPUT -p udp --dport 1194 -j ACCEPT
+
+# Allow OpenVPN (TCP alternative)
+# -A INPUT -p tcp --dport 443 -j ACCEPT
+
+# Allow ICMP ping
+-A INPUT -p icmp -j ACCEPT
+
+# FORWARD chain
+# Allow established connections
+-A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+# VPN traffic goes to VPN_USERS chain
+-A FORWARD -i tun0 -j VPN_USERS
+
+# VPN_USERS chain (populated by openvpn-firewall)
+# Example rules:
+# -A VPN_USERS -s 10.8.0.10 -d 192.168.1.0/24 -j ACCEPT
+# -A VPN_USERS -s 10.8.0.11 -d 10.0.0.0/8 -j ACCEPT
+
+COMMIT
+
+*nat
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+
+# Masquerade VPN traffic
+-A POSTROUTING -s 10.8.0.0/24 -j MASQUERADE
+
+COMMIT

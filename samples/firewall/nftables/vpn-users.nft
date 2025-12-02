@@ -1,0 +1,11 @@
+# Auto-generated VPN user rules (nftables)
+# Do not edit manually - changes will be overwritten
+
+# john.doe
+ip saddr 10.8.0.10 ip daddr { 192.168.1.0/24, 192.168.2.0/24 } accept
+# jane.smith
+ip saddr 10.8.0.11 ip daddr { 10.0.0.0/8, 172.16.0.0/12 } accept
+# admin.user
+ip saddr 10.8.0.2 ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 } accept
+# developer
+ip saddr 10.8.0.20 ip daddr { 192.168.100.0/24 } accept

@@ -1,0 +1,19 @@
+# Auto-generated VPN user rules (iptables)
+# Do not edit manually - changes will be overwritten
+
+*filter
+:VPN_USERS - [0:0]
+-F VPN_USERS
+# john.doe
+-A VPN_USERS -s 10.8.0.10 -d 192.168.1.0/24 -j ACCEPT
+-A VPN_USERS -s 10.8.0.10 -d 192.168.2.0/24 -j ACCEPT
+# jane.smith
+-A VPN_USERS -s 10.8.0.11 -d 10.0.0.0/8 -j ACCEPT
+-A VPN_USERS -s 10.8.0.11 -d 172.16.0.0/12 -j ACCEPT
+# admin.user
+-A VPN_USERS -s 10.8.0.2 -d 10.0.0.0/8 -j ACCEPT
+-A VPN_USERS -s 10.8.0.2 -d 172.16.0.0/12 -j ACCEPT
+-A VPN_USERS -s 10.8.0.2 -d 192.168.0.0/16 -j ACCEPT
+# developer
+-A VPN_USERS -s 10.8.0.20 -d 192.168.100.0/24 -j ACCEPT
+COMMIT

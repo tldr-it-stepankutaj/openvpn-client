@@ -1,0 +1,43 @@
+# OpenVPN Client Configuration
+# Copy this file to /etc/openvpn/client/config.yaml and adjust values
+
+api:
+  # Base URL of the OpenVPN Manager API
+  base_url: "http://127.0.0.1:8080"
+
+  # Option 1: API Token (recommended)
+  # Use a static token configured in the OpenVPN Manager server
+  token: "your-api-token-from-server-config"
+
+  # Option 2: Service Account (legacy)
+  # Use a dedicated user account with ADMIN role
+  # username: "vpn-service"
+  # password: "secure-service-password"
+
+  # API request timeout
+  timeout: 10s
+
+openvpn:
+  # Directory for temporary session files
+  # Must be writable by the OpenVPN process
+  session_dir: "/var/run/openvpn"
+
+firewall:
+  # Firewall type: "nftables" or "iptables"
+  type: "nftables"
+
+  # nftables settings
+  nftables:
+    # Path to the rule file (included in main nftables config)
+    rules_file: "/etc/nftables.d/vpn-users.nft"
+    # Command to reload nftables configuration
+    reload_command: "/usr/sbin/nft -f /etc/sysconfig/nftables.conf"
+
+  # iptables settings (used when the type is "iptables")
+  iptables:
+    # Name of the iptables chain for VPN user rules
+    chain_name: "VPN_USERS"
+    # Path to the rule file
+    rules_file: "/etc/iptables.d/vpn-users.rules"
+    # Command to reload iptables configuration
+    reload_command: "iptables-restore -n < /etc/iptables.d/vpn-users.rules"
