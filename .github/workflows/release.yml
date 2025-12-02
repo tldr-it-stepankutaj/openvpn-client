@@ -1,0 +1,347 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+env:
+  GO_VERSION: '1.23'
+
+jobs:
+  build:
+    name: Build binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build binaries
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          COMMIT=$(git rev-parse --short HEAD)
+          BUILD_TIME=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+
+          LDFLAGS="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildTime=${BUILD_TIME}"
+
+          mkdir -p dist/${{ matrix.goos }}-${{ matrix.goarch }}
+
+          for cmd in login connect disconnect firewall; do
+            go build -trimpath -ldflags "${LDFLAGS}" \
+              -o dist/${{ matrix.goos }}-${{ matrix.goarch }}/openvpn-${cmd} \
+              ./cmd/${cmd}
+          done
+
+      - name: Create tarball
+        run: |
+          cd dist/${{ matrix.goos }}-${{ matrix.goarch }}
+          tar -czvf ../openvpn-client-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz *
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/${{ matrix.goos }}-${{ matrix.goarch }}/
+          retention-days: 1
+
+      - name: Upload tarball artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarball-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/openvpn-client-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+          retention-days: 1
+
+  package-deb:
+    name: Build DEB packages
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-linux-${{ matrix.arch }}
+          path: dist/linux-${{ matrix.arch }}
+
+      - name: Install nFPM
+        run: |
+          echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
+          sudo apt-get update
+          sudo apt-get install -y nfpm
+
+      - name: Create nFPM config
+        run: |
+          cat > nfpm.yaml << 'EOF'
+          name: openvpn-client
+          arch: ${{ matrix.arch }}
+          platform: linux
+          version: ${{ steps.version.outputs.VERSION }}
+          maintainer: TLDR IT <info@tldr.cz>
+          description: |
+            OpenVPN Client integration tools for OpenVPN Manager.
+            Provides authentication, session management and firewall rules generation.
+          vendor: TLDR IT
+          homepage: https://github.com/tldr-it-stepankutaj/openvpn-client
+          license: MIT
+          section: net
+          priority: optional
+
+          contents:
+            - src: dist/linux-${{ matrix.arch }}/openvpn-login
+              dst: /usr/bin/openvpn-login
+              file_info:
+                mode: 0755
+            - src: dist/linux-${{ matrix.arch }}/openvpn-connect
+              dst: /usr/bin/openvpn-connect
+              file_info:
+                mode: 0755
+            - src: dist/linux-${{ matrix.arch }}/openvpn-disconnect
+              dst: /usr/bin/openvpn-disconnect
+              file_info:
+                mode: 0755
+            - src: dist/linux-${{ matrix.arch }}/openvpn-firewall
+              dst: /usr/bin/openvpn-firewall
+              file_info:
+                mode: 0755
+            - src: config.example.yaml
+              dst: /etc/openvpn-client/config.example.yaml
+              type: config|noreplace
+              file_info:
+                mode: 0640
+
+          depends:
+            - openvpn
+
+          suggests:
+            - nftables
+            - iptables
+          EOF
+
+      - name: Build DEB package
+        run: |
+          chmod +x dist/linux-${{ matrix.arch }}/*
+          nfpm package --packager deb --target .
+
+      - name: Upload DEB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-${{ matrix.arch }}
+          path: "*.deb"
+          retention-days: 1
+
+  package-rpm:
+    name: Build RPM packages
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            rpm_arch: x86_64
+          - arch: arm64
+            rpm_arch: aarch64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-linux-${{ matrix.arch }}
+          path: dist/linux-${{ matrix.arch }}
+
+      - name: Install nFPM
+        run: |
+          echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
+          sudo apt-get update
+          sudo apt-get install -y nfpm
+
+      - name: Create nFPM config
+        run: |
+          cat > nfpm.yaml << 'EOF'
+          name: openvpn-client
+          arch: ${{ matrix.rpm_arch }}
+          platform: linux
+          version: ${{ steps.version.outputs.VERSION }}
+          maintainer: TLDR IT <info@tldr.cz>
+          description: |
+            OpenVPN Client integration tools for OpenVPN Manager.
+            Provides authentication, session management and firewall rules generation.
+          vendor: TLDR IT
+          homepage: https://github.com/tldr-it-stepankutaj/openvpn-client
+          license: MIT
+
+          contents:
+            - src: dist/linux-${{ matrix.arch }}/openvpn-login
+              dst: /usr/bin/openvpn-login
+              file_info:
+                mode: 0755
+            - src: dist/linux-${{ matrix.arch }}/openvpn-connect
+              dst: /usr/bin/openvpn-connect
+              file_info:
+                mode: 0755
+            - src: dist/linux-${{ matrix.arch }}/openvpn-disconnect
+              dst: /usr/bin/openvpn-disconnect
+              file_info:
+                mode: 0755
+            - src: dist/linux-${{ matrix.arch }}/openvpn-firewall
+              dst: /usr/bin/openvpn-firewall
+              file_info:
+                mode: 0755
+            - src: config.example.yaml
+              dst: /etc/openvpn-client/config.example.yaml
+              type: config|noreplace
+              file_info:
+                mode: 0640
+
+          depends:
+            - openvpn
+
+          suggests:
+            - nftables
+            - iptables
+          EOF
+
+      - name: Build RPM package
+        run: |
+          chmod +x dist/linux-${{ matrix.arch }}/*
+          nfpm package --packager rpm --target .
+
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-${{ matrix.rpm_arch }}
+          path: "*.rpm"
+          retention-days: 1
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build, package-deb, package-rpm]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release
+
+          # Copy tarballs
+          cp artifacts/tarball-*/*.tar.gz release/
+
+          # Copy DEB packages
+          cp artifacts/deb-*/*.deb release/
+
+          # Copy RPM packages
+          cp artifacts/rpm-*/*.rpm release/
+
+          # Generate checksums
+          cd release
+          sha256sum * > checksums.txt
+
+          ls -la
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          if [ -n "$PREV_TAG" ]; then
+            echo "## Changes since ${PREV_TAG}" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            git log ${PREV_TAG}..HEAD --pretty=format:"- %s" >> CHANGELOG.md
+          else
+            echo "## Initial Release" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "First release of OpenVPN Client tools." >> CHANGELOG.md
+          fi
+
+          echo "" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "## Installation" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "### Debian/Ubuntu" >> CHANGELOG.md
+          echo '```bash' >> CHANGELOG.md
+          echo "sudo dpkg -i openvpn-client_*_amd64.deb" >> CHANGELOG.md
+          echo '```' >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "### RHEL/CentOS/Fedora" >> CHANGELOG.md
+          echo '```bash' >> CHANGELOG.md
+          echo "sudo rpm -i openvpn-client-*.x86_64.rpm" >> CHANGELOG.md
+          echo '```' >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "### Manual Installation" >> CHANGELOG.md
+          echo '```bash' >> CHANGELOG.md
+          echo "tar -xzf openvpn-client-*.tar.gz -C /usr/local/bin/" >> CHANGELOG.md
+          echo '```' >> CHANGELOG.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ steps.version.outputs.VERSION }}
+          body_path: CHANGELOG.md
+          files: release/*
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.VERSION, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
