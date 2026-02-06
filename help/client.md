@@ -1,6 +1,6 @@
 # OpenVPN Client Integration Guide
 
-This document describes how to create a Go client that integrates OpenVPN server with OpenVPN Manager API. The client replaces PHP scripts for authentication, connection handling, and firewall rules generation.
+This document describes how to create a Go client that integrates OpenVPN server with OpenVPN Manager API. 
 
 ## Table of Contents
 
