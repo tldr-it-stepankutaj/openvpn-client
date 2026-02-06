@@ -74,7 +74,11 @@ func main() {
 	}
 
 	if !authResp.Valid {
-		userLog.Warn("authentication failed", "message", authResp.Message)
+		if authResp.StatusCode == 429 {
+			userLog.Warn("authentication rejected", "reason", "rate_limited_or_locked", "message", authResp.Message)
+		} else {
+			userLog.Warn("authentication failed", "message", authResp.Message)
+		}
 		os.Exit(1)
 	}
 

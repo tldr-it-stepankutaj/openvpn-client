@@ -73,9 +73,10 @@ type VpnAuthRequest struct {
 
 // VpnAuthResponse represents VPN authentication response
 type VpnAuthResponse struct {
-	Valid   bool         `json:"valid"`
-	User    UserResponse `json:"user"`
-	Message string       `json:"message,omitempty"`
+	Valid      bool         `json:"valid"`
+	User       UserResponse `json:"user"`
+	Message    string       `json:"message,omitempty"`
+	StatusCode int          `json:"-"` // HTTP status code (not serialized)
 }
 
 // CreateSessionRequest represents request to create VPN session

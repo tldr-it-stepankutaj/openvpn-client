@@ -103,19 +103,31 @@ func (c *Client) ValidateVpnUser(ctx context.Context, username, password string)
 	if c.apiToken != "" {
 		// VPN auth endpoint returns VpnAuthResponse
 		if resp.StatusCode != http.StatusOK {
-			return &VpnAuthResponse{Valid: false, Message: "authentication failed"}, nil
+			msg := "authentication failed"
+			// Parse server error for specific messages (rate limit, lockout, etc.)
+			var errResp ErrorResponse
+			if err := json.NewDecoder(resp.Body).Decode(&errResp); err == nil && errResp.Message != "" {
+				msg = errResp.Message
+			}
+			return &VpnAuthResponse{Valid: false, Message: msg, StatusCode: resp.StatusCode}, nil
 		}
 
 		var authResp VpnAuthResponse
 		if err := json.NewDecoder(resp.Body).Decode(&authResp); err != nil {
 			return nil, fmt.Errorf("failed to decode auth response: %w", err)
 		}
+		authResp.StatusCode = resp.StatusCode
 		return &authResp, nil
 	}
 
 	// Legacy login endpoint
 	if resp.StatusCode != http.StatusOK {
-		return &VpnAuthResponse{Valid: false, Message: "authentication failed"}, nil
+		msg := "authentication failed"
+		var errResp ErrorResponse
+		if err := json.NewDecoder(resp.Body).Decode(&errResp); err == nil && errResp.Message != "" {
+			msg = errResp.Message
+		}
+		return &VpnAuthResponse{Valid: false, Message: msg, StatusCode: resp.StatusCode}, nil
 	}
 
 	var loginResp LoginResponse
