@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-02-06
+
+### Added
+- `StatusCode` field on `VpnAuthResponse` to track HTTP status codes from the server
+
+### Changed
+- `ValidateVpnUser()` now parses server error response body to extract specific error messages (rate limit, account lockout) instead of returning generic "authentication failed"
+- **openvpn-login** distinguishes HTTP 429 (rate limited / account locked) from other authentication failures in log output
+
+### Fixed
+- Error responses from VPN auth endpoint no longer silently discarded — server-provided messages are now propagated to the caller
+
 ## [1.0.0] - 2025-12-02
 
 ### Added
@@ -55,4 +67,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CIDR to netmask conversion for OpenVPN route configuration
 - Default route (`0.0.0.0/0`) handling for redirect-gateway scenarios
 
+[1.1.0]: https://github.com/tldr-it-stepankutaj/openvpn-client/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/tldr-it-stepankutaj/openvpn-client/releases/tag/v1.0.0
